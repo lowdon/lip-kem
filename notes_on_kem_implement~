@@ -1,0 +1,45 @@
+Here is the output of the KEM for a successful encaps, decaps process in dimension = 3.
+
+❯ cd "/home/lowdon/Documents/tese/kem" && sage "kem.sage"
+sampledmatrix
+ [[-14, 14, -4], [6, 3, 15], [1, 8, -4]]
+LLLreduced_sampledmatrix
+ [   1 8 -4 ]
+[ -15 6  0 ]
+[   6 3 15 ]
+
+PRIV/SECRET KEY, U
+ [ -1  13 -14]
+[ -5  16 -31]
+[ -1   8 -10]
+SECRET KEY DETERMINANT:  1
+QUADRATIC FORM S: 
+ [-143 -105   51]
+[  44  -84  111]
+[ -64   60  201]
+PUBLIC KEY/QUADRATIC FORM P: 
+ [ -1505    815  -6163]
+[  8765 -24959  51967]
+[-12483  22878 -63936]
+ro  0.999999999999999
+q  21
+sample  (7368, -1140, -2652)
+e vector:  [350.857142857143, -54.2857142857143, -126.285714285714]
+c vector:
+ [0.857142857142833, -0.285714285714285, -0.285714285714292]
+encaps_symmetric_k:  ac8d39b0afe7611c6f9ff4a5a28d410cd23dcbc786f8a511ee74f9f37bb244e41594afe3a11594170d31423bd6300104734f3a8302149f5a7cff6287a28dd5bb
+[[[0.857142857142833, -0.285714285714285, -0.285714285714292], 2], 'ac8d39b0afe7611c6f9ff4a5a28d410cd23dcbc786f8a511ee74f9f37bb244e41594afe3a11594170d31423bd6300104734f3a8302149f5a7cff6287a28dd5bb']
+[0.000000000000000 0.000000000000000 0.000000000000000]  :::: Y VECTOR IS TYPE:  <class 'sage.matrix.matrix_generic_dense.Matrix_generic_dense'>
+[0.000000000000000 0.000000000000000 0.000000000000000]  M1!
+[  -0.571428571428449 3.26849658449646e-13   -0.285714285714192]  M2!
+[    0.571428571428449 -3.26849658449646e-13     0.285714285714192]  RES!
+SAMPLE Y IS CORRECT!
+[ 0.857142857142833 -0.285714285714285 -0.285714285714292]  M1!
+[0.000000000000000 0.000000000000000 0.000000000000000]  M2!
+[ 0.857142857142833 -0.285714285714285 -0.285714285714292]  RES!
+decaps_symmetric_k:  ac8d39b0afe7611c6f9ff4a5a28d410cd23dcbc786f8a511ee74f9f37bb244e41594afe3a11594170d31423bd6300104734f3a8302149f5a7cff6287a28dd5bb
+is encaps_symmetric_k equal to decaps_symmetric_k?:  True
+
+
+
+THERE IS A BUG ON THE CODE! inputs on extractor(c, Z) lead to a successfull decryption, but we should be sending extractor(c - (U^-1)y) for the correct decaps!

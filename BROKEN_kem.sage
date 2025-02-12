@@ -1,3 +1,5 @@
+## THIS BROKEN VERSION HAS SOME ATTEMPTS AT CONSTRUCTING THE E AND C VECTORS IN ENCAPS - I'll use it for later (maybe?)
+
 from sage.all import Matrix
 from fpylll import LLL, IntegerMatrix
 from sage.stats.distributions.discrete_gaussian_integer import DiscreteGaussianDistributionIntegerSampler

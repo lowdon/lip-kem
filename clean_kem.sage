@@ -17,6 +17,9 @@ s = 2**(ndim) # Choose a positive real value # from corollary 3.3 HuckBennett's 
 # Define the MatrixSpace over RR (Real Field with 53 bits of precision)
 MS_RR_c = MatrixSpace(RR, 1, ndim)
 MS_RR = MatrixSpace(RR, ndim, ndim)
+MS_ZZ = MatrixSpace(ZZ, ndim, ndim)
+MS_ZZ_c = MatrixSpace(ZZ, 1, ndim)
+MS_ZZ_c_transposed = MatrixSpace(ZZ, ndim, 1)
 
 # END PARAMS
 
@@ -110,7 +113,7 @@ def main():
         print("sample ", sample)
 
         for k in range(ndim):
-            e_vec[k] = RR(sample[k]) / q
+            e_vec[k] = sample[k]
 
         return e_vec
 
@@ -118,29 +121,27 @@ def main():
 
     print("e vector: ", e)
 
-    # c vector definition: fractional parts of vector e
+    # c vector definition: vector e over the discretized torus Tq
     c = e
-    for i in range(len(e)):
-        c[i] = frac(c[i])
+    for i in range(ndim):
+        c[i] = Mod(c[i], q)
 
     # TODO: ADD LOOP FOR CASE WHERE c = e, THIS CANNOT BE THE CASE EVER!!! while(c == e): resample e, reconstruct c
 
 
-    print("c vector:\n", c)
+    print("c vector ::: ", c)
 
 
 
     # define random seed z
-
-
-
     Z = random.randint(0, s)
 
-    # vec_e has dim: ndim, rand_z is a secure random binary sequence
+    # vec_e has dim = ndim, rand_z needs to be a computationally secure random binary sequence
     def extractor(vec_e, rand_z):
+        print("inputs: vec_e, rand_z ::: ", vec_e, rand_z)
         hash_obj = hashlib.sha512()
         for i in range(len(vec_e)):
-            rand_z = rand_z + float(vec_e[i]) # doubt: i decided summing the values, not sure there is a better alternative for a deterministic way of computing this
+            rand_z = rand_z + vec_e[i] # doubt: i decided summing the values, not sure there is a better alternative for a deterministic way of computing this
         hash_obj.update(str(rand_z).encode('utf-8'))
         return hash_obj.hexdigest()
 
@@ -148,13 +149,11 @@ def main():
 
     print("encaps_symmetric_k: ", encaps_symmetric_k)
 
-    c_times_U = MS_RR_c(c) * MS_RR(U)   # 1x2 times 2x2
-
-    encaps_ciphertext = [c_times_U, Z]
+    encaps_ciphertext = [c, Z]
 
     output_encaps = [encaps_ciphertext, encaps_symmetric_k]
 
-    print("((c_times_U, Z), k) :::: ", output_encaps)
+    print("((c, Z), k) :::: ", output_encaps)
 
 
     ## END ENCAPS
@@ -168,30 +167,74 @@ def main():
         print(res, " RES!")
         return res
 
+    #Let x be a vector in Zn. The norm of x over the quadratic form Q is ||x||_Q = sqrt(x^t * Q * x)
+    def quadratic_norm(x, Q):
+        x = MS_ZZ_c_transposed(x)
+        return sqrt((x.transpose() * Q * x)[0][0])
+
+    #Calculates first minimum of a lattice
+    def first_minimum_S(Q):
+        #x = [0] * ndim
+        max_norm = sys.maxsize
+        smallest_norm_index = -1
+        for i in range(ndim):
+            qnorm = quadratic_norm(Q[i], Q)
+            if(qnorm < max_norm):
+                max_norm = qnorm
+                smallest_norm_index = i
+                #x = Q[i]
+        return max_norm
+
+    #returns a vector from S such that ||y - Uc||_S <= rho
+    def decode(S, U, c):
+        Uc = U * c
+        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * ro) / sqrt(ndim))
+        y = sampler()
+        if(y.is_zero()):
+            restart_program()
+        print("y sample at decode: ", y)
+        quad_norm = quadratic_norm(matrix_subtract(MS_ZZ_c(y).transpose(), Uc), S)
+        print("quad_norm of y-(U*c) :  ", quad_norm)
+
+        #first_min = first_minimum_S(S)
+        #print("first minimum of S: ", first_min)
+
+        if(quad_norm < 1):
+            print("GOOD SAMPLE, SAMPLE: ", y)
+            return y
+
+        restart_program()
+
+
     
     def begin_decaps():
         print("\n\n\nBEGIN DECAPS::::\n")
         # inputs: secret_key = U; encaps_ciphertext = (c, Z)
-        print("inputs: secret_key = U =\n", U, "\n; encaps_ciphertext = (c := (c_times_U, Z) : ", encaps_ciphertext, "\n")
+        print("inputs: secret_key = U =\n", U, "\n; encaps_ciphertext = (c := (c, Z) : ", encaps_ciphertext, "\n")
         
-        real_U = MS_RR(U)
+        #Step 1: obtain y from S, Uc
+        y = decode(S, MS_ZZ(U), MS_ZZ_c(c).transpose())
 
-        c_times_U_times_Uminus = c_times_U * MS_RR(U.inverse()) # 2x2 times 2x1
+        #Step 2: compute k
+        U_invert_times_y = U.inverse() * y
 
-        #convert c_times_U_times_Uminus to list for extractor
+        c_minus_Uy = matrix_subtract(MS_ZZ_c(c), MS_ZZ_c(U_invert_times_y))
+
+
+        #convert c_minus_Uy to list for extractor
         #round values close to integer
-        c_times_U_times_Uminus_list = [0] * ndim
+        c_minus_Uy_list = [0] * ndim
         threshold = 0.000000001
         for i in range(ndim):
-            if(c_times_U_times_Uminus[0, i] < threshold and c_times_U_times_Uminus[0, i] > - threshold):
-                c_times_U_times_Uminus[0, i] = 0
-            c_times_U_times_Uminus_list[i] = c_times_U_times_Uminus[0, i]
-        print("c_times_U_times_Uminus_list ::::: ", c_times_U_times_Uminus_list)
+            if(c_minus_Uy[0, i] < threshold and c_minus_Uy[0, i] > - threshold):
+                c_minus_Uy[0, i] = 0
+            c_minus_Uy_list[i] = c_minus_Uy[0, i]
+        print("c_minus_Uy_list ::::: ", c_minus_Uy_list)
 
 
         
 
-        decaps_symmetric_k = extractor(c_times_U_times_Uminus_list, Z)
+        decaps_symmetric_k = extractor(c_minus_Uy_list, Z)
 
         print("decaps_symmetric_k: ", decaps_symmetric_k)
 

@@ -133,3 +133,125 @@ is encaps_symmetric_k equal to decaps_symmetric_k?:  True
 
 Issues: should we sample vectors at decode time?
 our discrete sampler has to sample a vector such that 
+
+
+---------------------
+
+
+
+TODO 24/feb:
+
+Fazer:
+1) plano/índice para o novo texto da tese
+
+2) escrever na tese
+
+Estudar: 
+0) estudar o decoder do micciancio e instanciar o nosso KEM com barnes wall. some info on decoders here? https://github.com/olapiha/bounded_distance_decoding/blob/master/report.pdf
+
+1) ler https://cseweb.ucsd.edu/~daniele/papers/PostQuantum.pdf chaps 5 (on pub key crypto for lattices (has details on efficiency of schemes, security proofs, detailed analysis of schemes))
+
+2) rever lattice theory: resolver estes exercícios https://cseweb.ucsd.edu/~daniele/papers/FOSAD11.pdf
+
+
+RESUMO DO QUE TENHO A FAZER: 
+
+1)comprometo-me hoje a: passar lemmas e teoremas do decoders for general lattices para o caderno e entender.
+
+continuar a ver video do micciancio, 
+estudar paper do decoder, 
+mudar código p/ instanciar barnes wall, 
+implementar decoder, 
+testar, tirar notas, 
+escrever tese
+
+
+
+
+----------------
+
+
+Mar 24 2025
+
+Output of KEM w/ ndim = 3:
+
+rho  0.500000000000000
+q  42
+
+
+
+BEGIN KEYGEN::::
+
+LLLreduced_sampledmatrix
+ [1 0 0]
+[0 1 0]
+[0 0 1]
+
+PRIV/SECRET KEY, U
+ [ -3  -2  -9]
+[ -4  -3 -12]
+[ -1   0  -2]
+SECRET KEY DETERMINANT:  1
+QUADRATIC FORM S: 
+ [1 0 0]
+[0 1 0]
+[0 0 1]
+PUBLIC KEY/QUADRATIC FORM P: 
+ [ 26  18  77]
+[ 18  13  54]
+[ 77  54 229]
+
+
+
+BEGIN ENCAPS::::
+
+sample  (-4, 9, -2)
+e vector:  [-2/21, 3/14, -1/21]
+c vector :::  [19/21, 3/14, 20/21]
+extractor input vector: :::  [-2/21, 3/14, -1/21]
+encaps_symmetric_k:  427dc3b220d0af610acc5f00f924792b49c211a47e5dc079d29a17bb08164c9d
+((c), k) ::::  [[[19/21, 3/14, 20/21]], '427dc3b220d0af610acc5f00f924792b49c211a47e5dc079d29a17bb08164c9d']
+
+
+
+BEGIN DECAPS::::
+
+inputs: secret_key = U =
+ [ -3  -2  -9]
+[ -4  -3 -12]
+[ -1   0  -2] 
+; encaps_ciphertext = (c := (c, Z) :  [[19/21, 3/14, 20/21]] 
+
+Uc::::::  [  -82/7]
+[-659/42]
+[ -59/21]
+y at decode:  [-12]
+[-16]
+[ -3]
+begin matrix subtraction
+[-12]
+[-16]
+[ -3]  M1!
+[  -82/7]
+[-659/42]
+[ -59/21]  M2!
+[  -2/7]
+[-13/42]
+[ -4/21]  RES!
+end matrix subtraction
+quad_norm of y-(U*c) :   1/42*sqrt(377)
+GOOD SAMPLE, SAMPLE:  [-12]
+[-16]
+[ -3]
+U_invert_times_y:::::  [1]
+[0]
+[1]
+begin matrix subtraction
+[19/21  3/14 20/21]  M1!
+[1 0 1]  M2!
+[-2/21  3/14 -1/21]  RES!
+end matrix subtraction
+c_minus_Uy_list :::::  [-2/21, 3/14, -1/21]
+extractor input vector: :::  [-2/21, 3/14, -1/21]
+decaps_symmetric_k:  427dc3b220d0af610acc5f00f924792b49c211a47e5dc079d29a17bb08164c9d
+is encaps_symmetric_k equal to decaps_symmetric_k?:  True

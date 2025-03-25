@@ -6,6 +6,7 @@ from sage.matrix.constructor import random_unimodular_matrix
 import hashlib, random
 import os
 import sys
+import copy
 
 # PARAMS
 #dimension of lattices
@@ -14,16 +15,52 @@ ndim = 2
 # Define the standard deviation parameter 's', must be larger than smoothing parameter
 s = 2**(ndim) # Choose a positive real value # from corollary 3.3 HuckBennett's paper on rotations of Zn
 
+rho = 0.5 #0.99 #has to be less than 1 because we're working in Zn??? not sure (shortest vector has norm 1), no clue if this is a good value
+q = ceil((s * ndim / rho) * sqrt(log(2*ndim + 4)/pi)) #from Ducas' KEM TODO: delete q * 100000 from sampler line, just for DEBUG
+
+print("rho ", rho)
+print("q ", q)  
+
 # Define the MatrixSpace over RR (Real Field with 53 bits of precision)
 MS_RR_c = MatrixSpace(RR, 1, ndim)
 MS_RR = MatrixSpace(RR, ndim, ndim)
 MS_ZZ = MatrixSpace(ZZ, ndim, ndim)
 MS_ZZ_c = MatrixSpace(ZZ, 1, ndim)
 MS_ZZ_c_transposed = MatrixSpace(ZZ, ndim, 1)
+MS_QQ = MatrixSpace(QQ, ndim, ndim)
+MS_QQ_c = MatrixSpace(QQ, 1, ndim)
 
 # END PARAMS
 
 
+# AUX FUNCTIONS
+
+def matrix_subtract(m1, m2):
+    print("begin matrix subtraction")
+    print(m1, " M1!")
+    print(m2, " M2!")
+    res = m1 - m2
+    print(res, " RES!")
+    print("end matrix subtraction")
+    return res
+
+#Let x be a vector in Zn. The norm of x over the quadratic form Q is ||x||_Q = sqrt(x^t * Q * x)
+def quadratic_norm(x, Q):
+    #x = MS_ZZ_c_transposed(x)
+    return sqrt((x.transpose() * Q * x)[0][0])
+
+#Outputs the lambda_n_of_quadratic Q
+def lambda_n_of_quadratic(Q):
+    #x = [0] * ndim
+    max_norm = sys.maxsize
+    #smallest_norm_index = -1
+    for i in range(ndim):
+        qnorm = quadratic_norm(MS_ZZ_c(Q[i]).transpose(), Q)
+        if(qnorm < max_norm):
+            max_norm = qnorm
+            #smallest_norm_index = i
+            #x = Q[i]
+    return max_norm
 
 def restart_program():
     """Restarts the current program."""
@@ -31,7 +68,7 @@ def restart_program():
     python = sys.executable  # Path to the Python interpreter
     os.execl(python, python, *sys.argv)  # Replace the current process with a new one
 
-
+# END AUX FUNCTIONS
 
 def main():
     print("\n\n\nBEGIN KEYGEN::::\n")
@@ -49,15 +86,16 @@ def main():
         return initial_basis
 
 
-    sampledmatrix = discrete_n_dim_sampler(int(ndim))
+    #sampledmatrix = discrete_n_dim_sampler(int(ndim))
 
-    print("sampledmatrix\n", sampledmatrix)
+    #print("sampledmatrix\n", sampledmatrix)
 
     # Define a basis matrix for the lattice
-    basis_matrix = IntegerMatrix.from_matrix(sampledmatrix)
+    #basis_matrix = IntegerMatrix.from_matrix(sampledmatrix)
 
     # Do a LLL reduction - This is the lattice basis
-    reduced = LLL.reduction(basis_matrix)
+    #reduced = LLL.reduction(basis_matrix)
+    reduced = identity_matrix(ndim)
 
     # Obtain a random unimodular matrix in GL
     matrix_space = sage.matrix.matrix_space.MatrixSpace(ZZ, ndim)
@@ -70,19 +108,20 @@ def main():
     print("SECRET KEY DETERMINANT: ", U.determinant())
 
     # This is the quadratic form S from the KEM
-    S = Matrix(ZZ, reduced.transpose() * reduced)
-    S = S.LLL()
+    #S = Matrix(ZZ, reduced.transpose() * reduced)
+    #S = S.LLL()
+    S = reduced
 
     print("QUADRATIC FORM S: \n", S)
 
     # This is the P from the KEM
     P = U.transpose() * S * U
-    P = P.LLL()
+    #P = P.LLL()
 
     print("PUBLIC KEY/QUADRATIC FORM P: \n", P)
 
-    secret_key = U
-    public_key = P
+    #secret_key = U
+    #public_key = P
 
 
 
@@ -91,20 +130,17 @@ def main():
     ### BEGIN ENCAPS
     print("\n\n\nBEGIN ENCAPS::::\n")
 
-    ro = 0.999999999999999 #0.99 #has to be less than 1 because we're working in Zn??? not sure (shortest vector has norm 1), no clue if this is a good value
-    q = ceil((s * ndim / ro) * sqrt(log(2*ndim + 4)/pi)) #from Ducas' KEM TODO: delete q * 100000 from sampler line, just for DEBUG
 
-    print("ro ", ro)
-    print("q ", q)  
 
     ## sampling e vector
     ## i think this gets stuck if the pkey is bad(need to define what bad means... see HAWK spec)
     ## s = 500 works well for ndim=2; 
-    def discrete_n_dim_vector_sampler(q, ro, pkey):
-        sampler = DiscreteGaussianDistributionLatticeSampler(pkey, (q  * ro) / sqrt(ndim))#5 * math.pow(10, ndim))#
+    small_s = lambda_n_of_quadratic(P)
+    def discrete_n_dim_vector_sampler(q, rho, pkey):
+        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))#5 * math.pow(10, ndim))#
+        sample = sampler()
         e_vec = [0] * ndim
 
-        sample = sampler()
         if(type(sample) == type(None)):
             return restart_program()
         if(sample.is_zero()):
@@ -112,94 +148,127 @@ def main():
             #sample = sampler()
         print("sample ", sample)
 
+        #copy to itself so the vector becomes mutable
+        sample = copy.copy(sample)
+
         for k in range(ndim):
-            e_vec[k] = sample[k]
+            #print("RR(sample[k])::: ", RR(sample[k]), " q::: ", q)
+            
+            #we want k to have positive values (this helps me with completeness)
+            #while(sample[k] < 0):
+            #    sample[k] = sample[k] + q
+            
+            e_vec[k] = abs(sample[k]) / q
+        
+        #check if sample has norm less than rho, if not, repeat
+        e_norm = quadratic_norm(MS_QQ_c(e_vec).transpose(), S)
+        if(e_norm > rho):
+            print("sample for e_vec has norm > rho")
+            restart_program()
 
         return e_vec
 
-    e = discrete_n_dim_vector_sampler(q, ro, public_key) 
+    e = discrete_n_dim_vector_sampler(q, rho, P) 
 
     print("e vector: ", e)
 
     # c vector definition: vector e over the discretized torus Tq
-    c = e
-    for i in range(ndim):
-        c[i] = Mod(c[i], q)
-
-    # TODO: ADD LOOP FOR CASE WHERE c = e, THIS CANNOT BE THE CASE EVER!!! while(c == e): resample e, reconstruct c
-
+    c = copy.copy(e)
+    for i in range(ndim):#if(c[i] >= 0):
+        c[i] = c[i] - floor(c[i])
+        #else: c[i] = c[i] - ceil(c[i])
 
     print("c vector ::: ", c)
 
+    if(c == e):
+        print("Vectors c and e are equal, restart.")
+        restart_program()
 
 
-    # define random seed z
-    Z = random.randint(0, s)
+#    UNIVERSAL HASH FUNCTION VERSION W/OUT RANDOM ORACLE
+#    # define random seed z
+#    Z = random.randint(0, s)
+#
+#    # vec_e has dim = ndim, rand_z needs to be a computationally secure random binary sequence
+#    def extractor(vec_e, rand_z):
+#        print("inputs: vec_e, rand_z ::: ", vec_e, rand_z)
+#        hash_obj = hashlib.sha512()
+#        for i in range(len(vec_e)):
+#            rand_z = rand_z + vec_e[i] # doubt: i decided summing the values, not sure there is a better alternative for a deterministic way of computing this
+#        hash_obj.update(str(rand_z).encode('utf-8'))
+#        return hash_obj.hexdigest()
 
-    # vec_e has dim = ndim, rand_z needs to be a computationally secure random binary sequence
-    def extractor(vec_e, rand_z):
-        print("inputs: vec_e, rand_z ::: ", vec_e, rand_z)
-        hash_obj = hashlib.sha512()
-        for i in range(len(vec_e)):
-            rand_z = rand_z + vec_e[i] # doubt: i decided summing the values, not sure there is a better alternative for a deterministic way of computing this
-        hash_obj.update(str(rand_z).encode('utf-8'))
+    #RANDOM ORACLE VERSION
+    # vec_e has dim = ndim
+    # hashes vector e
+    def extractor(vec_e):
+        print("extractor input vector: ::: ", vec_e)
+        hash_obj = hashlib.sha256()
+        hash_obj.update(str(vec_e).encode('utf-8'))
         return hash_obj.hexdigest()
 
-    encaps_symmetric_k = extractor(e, Z)
+    encaps_symmetric_k = extractor(e)
 
     print("encaps_symmetric_k: ", encaps_symmetric_k)
 
-    encaps_ciphertext = [c, Z]
+    #old: from universal hash function model
+    #encaps_ciphertext = [c, Z]
+
+    encaps_ciphertext = [c]
 
     output_encaps = [encaps_ciphertext, encaps_symmetric_k]
 
-    print("((c, Z), k) :::: ", output_encaps)
+    #print("((c, Z), k) :::: ", output_encaps)
+    print("((c), k) :::: ", output_encaps)
 
 
     ## END ENCAPS
 
     ## BEGIN DECAPS
 
-    def matrix_subtract(m1, m2):
-        print(m1, " M1!")
-        print(m2, " M2!")
-        res = m1 - m2
-        print(res, " RES!")
-        return res
 
-    #Let x be a vector in Zn. The norm of x over the quadratic form Q is ||x||_Q = sqrt(x^t * Q * x)
-    def quadratic_norm(x, Q):
-        x = MS_ZZ_c_transposed(x)
-        return sqrt((x.transpose() * Q * x)[0][0])
 
-    #Calculates first minimum of a lattice
-    def first_minimum_S(Q):
-        #x = [0] * ndim
-        max_norm = sys.maxsize
-        smallest_norm_index = -1
-        for i in range(ndim):
-            qnorm = quadratic_norm(Q[i], Q)
-            if(qnorm < max_norm):
-                max_norm = qnorm
-                smallest_norm_index = i
-                #x = Q[i]
-        return max_norm
+#OLD CODE FOR DECODER
+    #returns a vector from S such that ||y - Uc||_S <= rho
+#    def decode(S, U, c):
+#        Uc = U * c
+#        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))
+#        y = sampler()
+#        if(y.is_zero()):
+#            restart_program()
+#        print("y sample at decode: ", y)
+#        quad_norm = quadratic_norm(matrix_subtract(MS_ZZ_c(y).transpose(), Uc), S)
+#        print("quad_norm of y-(U*c) :  ", quad_norm)
+#
+#        #first_min = first_minimum_S(S)
+#        #print("first minimum of S: ", first_min)
+#
+#        if(quad_norm < 1):
+#            print("GOOD SAMPLE, SAMPLE: ", y)
+#            return y
+#
+#        restart_program()
+
 
     #returns a vector from S such that ||y - Uc||_S <= rho
+    #decoding in Zn is equivalent to rounding to the nearest integer
     def decode(S, U, c):
+        
         Uc = U * c
-        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * ro) / sqrt(ndim))
-        y = sampler()
-        if(y.is_zero()):
-            restart_program()
-        print("y sample at decode: ", y)
-        quad_norm = quadratic_norm(matrix_subtract(MS_ZZ_c(y).transpose(), Uc), S)
+        print("Uc:::::: ", Uc)
+
+        y = Uc.apply_map(lambda x: round(x)) #if(x>=0):ceil(x) else:floor(x))
+
+        #if(y.is_zero()):
+        #    restart_program()
+        print("y at decode: ", y)
+        quad_norm = quadratic_norm(matrix_subtract(y, Uc), S)
         print("quad_norm of y-(U*c) :  ", quad_norm)
 
         #first_min = first_minimum_S(S)
         #print("first minimum of S: ", first_min)
 
-        if(quad_norm < 1):
+        if(quad_norm <= rho):
             print("GOOD SAMPLE, SAMPLE: ", y)
             return y
 
@@ -213,28 +282,31 @@ def main():
         print("inputs: secret_key = U =\n", U, "\n; encaps_ciphertext = (c := (c, Z) : ", encaps_ciphertext, "\n")
         
         #Step 1: obtain y from S, Uc
-        y = decode(S, MS_ZZ(U), MS_ZZ_c(c).transpose())
+        y = decode(S, MS_QQ(U), MS_QQ_c(c).transpose())
 
         #Step 2: compute k
-        U_invert_times_y = U.inverse() * y
 
-        c_minus_Uy = matrix_subtract(MS_ZZ_c(c), MS_ZZ_c(U_invert_times_y))
+        #U^-1 * y is the integer part of vector "e" from encaps
+        U_invert_times_y = U.inverse() * y # MUST BE U times y and not U^-1 as in the scheme!?
+        print("U_invert_times_y::::: ", U_invert_times_y)
+
+        c_minus_Uy = matrix_subtract(MS_QQ_c(c), U_invert_times_y.transpose())
 
 
         #convert c_minus_Uy to list for extractor
-        #round values close to integer
         c_minus_Uy_list = [0] * ndim
-        threshold = 0.000000001
         for i in range(ndim):
-            if(c_minus_Uy[0, i] < threshold and c_minus_Uy[0, i] > - threshold):
-                c_minus_Uy[0, i] = 0
+            #since we're working in the Torus, this next while is needed
+            #while(c_minus_Uy[0, i] < 0):
+            #    c_minus_Uy[0, i] = c_minus_Uy[0, i] + 1
             c_minus_Uy_list[i] = c_minus_Uy[0, i]
         print("c_minus_Uy_list ::::: ", c_minus_Uy_list)
 
 
         
 
-        decaps_symmetric_k = extractor(c_minus_Uy_list, Z)
+        #decaps_symmetric_k = extractor(c_minus_Uy_list, Z)
+        decaps_symmetric_k = extractor(c_minus_Uy_list)
 
         print("decaps_symmetric_k: ", decaps_symmetric_k)
 

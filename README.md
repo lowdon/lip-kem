@@ -1,2 +1,2 @@
 # lip-kem
-Key Encapsulation Mechanism based on the (search) Lattice Isomorphism Problem
+Key Encapsulation Mechanism based on the decisional Lattice Isomorphism Problem

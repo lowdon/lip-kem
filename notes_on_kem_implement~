@@ -1,0 +1,84 @@
+Here is the output of the KEM for a successful encaps, decaps process in dimension = 3.
+
+PARAMS:
+rho:  0.475000000000000
+s:  15.8333333333333*sqrt(3)
+q:  149
+
+
+
+BEGIN KEYGEN::::
+
+S=I_n [1 0 0]
+[0 1 0]
+[0 0 1]
+
+PRIV/SECRET KEY, U
+ [ 1  0  0]
+[ 0  0 -1]
+[ 0  1  0]
+SECRET KEY DETERMINANT:  1
+QUADRATIC FORM S: 
+ [1 0 0]
+[0 1 0]
+[0 0 1]
+PUBLIC KEY/QUADRATIC FORM P: 
+ [1 0 0]
+[0 1 0]
+[0 0 1]
+
+
+
+BEGIN ENCAPS::::
+
+sample  (1, -26, -12)
+e_vec  [1/149, -26/149, -12/149]
+e vector:  [1/149, -26/149, -12/149]
+c vector :::  [1/149, 123/149, 137/149]
+extractor input vector: :::  [1/149, -26/149, -12/149]
+encaps_symmetric_k:  1ddc8f281f78257155f0438414e34a2091c294e0d00e95da20a5e0a292d2796b
+((c), k) ::::  [[[1/149, 123/149, 137/149]], '1ddc8f281f78257155f0438414e34a2091c294e0d00e95da20a5e0a292d2796b']
+
+
+
+BEGIN DECAPS::::
+
+inputs: secret_key = U =
+ [ 1  0  0]
+[ 0  0 -1]
+[ 0  1  0] 
+; encaps_ciphertext = (c := (c, Z) :  [[1/149, 123/149, 137/149]] 
+
+Uc::::::  [   1/149]
+[-137/149]
+[ 123/149]
+y at decode:  [ 0]
+[-1]
+[ 1]
+begin matrix subtraction
+[ 0]
+[-1]
+[ 1]  M1!
+[   1/149]
+[-137/149]
+[ 123/149]  M2!
+[ -1/149]
+[-12/149]
+[ 26/149]  RES!
+end matrix subtraction
+quad_norm of y-(U*c) :   1/149*sqrt(821)
+GOOD SAMPLE, SAMPLE:  [ 0]
+[-1]
+[ 1]
+U_invert_times_y:::::  [0]
+[1]
+[1]
+begin matrix subtraction
+[  1/149 123/149 137/149]  M1!
+[0 1 1]  M2!
+[  1/149 -26/149 -12/149]  RES!
+end matrix subtraction
+c_minus_Uy_list :::::  [1/149, -26/149, -12/149]
+extractor input vector: :::  [1/149, -26/149, -12/149]
+decaps_symmetric_k:  1ddc8f281f78257155f0438414e34a2091c294e0d00e95da20a5e0a292d2796b
+is encaps_symmetric_k equal to decaps_symmetric_k?:  True

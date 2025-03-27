@@ -10,8 +10,8 @@ import copy
 
 # PARAMS
 #dimension of lattices
-ndim = 3
-
+ndim = 50
+print("lattice dimensions (ndim): ", ndim)
 
 rho = 0.475 # rho < lambda_1(S)/2 = 1/2
 print("PARAMS:\nrho: ", rho)
@@ -101,7 +101,7 @@ def main():
 
     # Do a LLL reduction - This is the lattice basis
     #reduced = LLL.reduction(basis_matrix)
-    reduced = identity_matrix(ndim)
+    S = identity_matrix(ndim)
 
     
     
@@ -115,24 +115,17 @@ def main():
     U = random_unimodular_matrix(matrix_space).LLL()
 
 
-    print("S=I_n", reduced)
-    print()
-    print("PRIV/SECRET KEY, U\n", U)
+    print("QUADRATIC FORM S=I_n")
+    print("PRIV/SECRET KEY, U")
+    print(U)
     print("SECRET KEY DETERMINANT: ", U.determinant())
 
-    # This is the quadratic form S from the KEM
-    #S = Matrix(ZZ, reduced.transpose() * reduced)
-    #S = S.LLL()
-    S = reduced
-
-    print("QUADRATIC FORM S: \n", S)
-
     # This is the P from the KEM
-    # If S=I_n, then P =U^t * I_n * U = U^t * U
-    P = U.transpose() * U
-    #P = P.LLL()
+    # If S=I_n, then P =U^t * I_n * U = U^t * U = I_n, regardless of U 
+    #P = U.transpose() * U
+    P = S
 
-    print("PUBLIC KEY/QUADRATIC FORM P: \n", P)
+    print("PUBLIC KEY/QUADRATIC FORM P = U^t * S * U = I_n")
 
     #secret_key = U
     #public_key = P
@@ -147,9 +140,7 @@ def main():
 
 
     ## sampling e vector
-    ## i think this gets stuck if the pkey is bad(need to define what bad means... see HAWK spec)
     ## s = 500 works well for ndim=2; 
-    small_s = lambda_n_of_quadratic(P)
     def discrete_n_dim_vector_sampler(q, rho, pkey):
         sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))#, c=(q/2,q/2,q/2))#5 * math.pow(10, ndim))#
         sample = sampler()

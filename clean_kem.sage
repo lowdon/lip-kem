@@ -10,16 +10,20 @@ import copy
 
 # PARAMS
 #dimension of lattices
-ndim = 2
+ndim = 3
+
+
+rho = 0.475 # rho < lambda_1(S)/2 = 1/2
+print("PARAMS:\nrho: ", rho)
 
 # Define the standard deviation parameter 's', must be larger than smoothing parameter
-s = 2**(ndim) # Choose a positive real value # from corollary 3.3 HuckBennett's paper on rotations of Zn
+# realistically, s is a value from 0.5 in the lowest dimension, and almost 1 in dim 200
+# s is either larger than lambda_n(S)=1 or ||B*||*ln(2n+4). since the second case is lower than 1 for dim <200, lambda_n(S) is the max value. 
+s = 100*rho/sqrt(ndim)#2**(ndim) # Choose a positive real value # from corollary 3.3 HuckBennett's paper on rotations of Zn
+print("s: ", s)
 
-rho = 0.5 #0.99 #has to be less than 1 because we're working in Zn??? not sure (shortest vector has norm 1), no clue if this is a good value
 q = ceil((s * ndim / rho) * sqrt(log(2*ndim + 4)/pi)) #from Ducas' KEM TODO: delete q * 100000 from sampler line, just for DEBUG
-
-print("rho ", rho)
-print("q ", q)  
+print("q: ", q) 
 
 # Define the MatrixSpace over RR (Real Field with 53 bits of precision)
 MS_RR_c = MatrixSpace(RR, 1, ndim)
@@ -72,16 +76,18 @@ def restart_program():
 
 def main():
     print("\n\n\nBEGIN KEYGEN::::\n")
-    def discrete_n_dim_sampler(n):
+    def discrete_n_dim_sampler():
         sampler = DiscreteGaussianDistributionIntegerSampler(s)
-        initial_basis = [0] * n
+        initial_basis = [0] * ndim
 
 
-        for i in range(n):
-            ivec = [0] * n
-            for k in range(n):
+        for i in range(ndim):
+            ivec = [0] * ndim
+            for k in range(ndim):
                 ivec[k] = sampler()
             initial_basis[i] = ivec
+
+        initial_basis = MS_ZZ(initial_basis)
         
         return initial_basis
 
@@ -97,12 +103,19 @@ def main():
     #reduced = LLL.reduction(basis_matrix)
     reduced = identity_matrix(ndim)
 
+    
+    
+    #U = discrete_n_dim_sampler()
+    ##output sample has to be invertible!
+    #while(U.determinant() != 1 or U.determinant() != -1):
+    #    U = discrete_n_dim_sampler()
+
     # Obtain a random unimodular matrix in GL
     matrix_space = sage.matrix.matrix_space.MatrixSpace(ZZ, ndim)
-    U = random_unimodular_matrix(matrix_space)
+    U = random_unimodular_matrix(matrix_space).LLL()
 
 
-    print("LLLreduced_sampledmatrix\n", reduced)
+    print("S=I_n", reduced)
     print()
     print("PRIV/SECRET KEY, U\n", U)
     print("SECRET KEY DETERMINANT: ", U.determinant())
@@ -115,7 +128,8 @@ def main():
     print("QUADRATIC FORM S: \n", S)
 
     # This is the P from the KEM
-    P = U.transpose() * S * U
+    # If S=I_n, then P =U^t * I_n * U = U^t * U
+    P = U.transpose() * U
     #P = P.LLL()
 
     print("PUBLIC KEY/QUADRATIC FORM P: \n", P)
@@ -137,7 +151,7 @@ def main():
     ## s = 500 works well for ndim=2; 
     small_s = lambda_n_of_quadratic(P)
     def discrete_n_dim_vector_sampler(q, rho, pkey):
-        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))#5 * math.pow(10, ndim))#
+        sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))#, c=(q/2,q/2,q/2))#5 * math.pow(10, ndim))#
         sample = sampler()
         e_vec = [0] * ndim
 
@@ -158,13 +172,14 @@ def main():
             #while(sample[k] < 0):
             #    sample[k] = sample[k] + q
             
-            e_vec[k] = abs(sample[k]) / q
+            e_vec[k] = sample[k] / q
         
+        print("e_vec ", e_vec)
         #check if sample has norm less than rho, if not, repeat
         e_norm = quadratic_norm(MS_QQ_c(e_vec).transpose(), S)
-        if(e_norm > rho):
-            print("sample for e_vec has norm > rho")
-            restart_program()
+        #if(e_norm > rho):
+        #    print("sample for e_vec has norm > rho")
+        #    restart_program()
 
         return e_vec
 
@@ -180,9 +195,10 @@ def main():
 
     print("c vector ::: ", c)
 
-    if(c == e):
-        print("Vectors c and e are equal, restart.")
-        restart_program()
+    #CHECK if c = e. should the program abort in this case?
+    #if(c == e):
+    #    print("Vectors c and e are equal, restart.")
+    #    restart_program()
 
 
 #    UNIVERSAL HASH FUNCTION VERSION W/OUT RANDOM ORACLE

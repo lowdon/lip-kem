@@ -10,7 +10,10 @@ import copy
 
 # PARAMS
 #dimension of lattices
-ndim = 50
+if(len(sys.argv[1:]) == 0):
+    ndim = 75
+else:
+    ndim = int(sys.argv[1])
 print("lattice dimensions (ndim): ", ndim)
 
 rho = 0.475 # rho < lambda_1(S)/2 = 1/2
@@ -112,7 +115,7 @@ def main():
 
     # Obtain a random unimodular matrix in GL
     matrix_space = sage.matrix.matrix_space.MatrixSpace(ZZ, ndim)
-    U = random_unimodular_matrix(matrix_space).LLL()
+    U = random_unimodular_matrix(matrix_space).BKZ()
 
 
     print("QUADRATIC FORM S=I_n")

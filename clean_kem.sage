@@ -11,7 +11,7 @@ import copy
 # PARAMS
 #dimension of lattices
 if(len(sys.argv[1:]) == 0):
-    ndim = 75
+    ndim = 10
 else:
     ndim = int(sys.argv[1])
 print("lattice dimensions (ndim): ", ndim)

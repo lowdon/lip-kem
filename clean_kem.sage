@@ -85,8 +85,8 @@ def extractor(vec_e):
 
 # Discrete Gaussian Sampler for vector e from KEM (step 2 Encaps)
 ## s = 500 works well for ndim=2; 
-def discrete_n_dim_vector_sampler(q, rho, pkey):
-    sampler = DiscreteGaussianDistributionLatticeSampler(S, (q  * rho) / sqrt(ndim))
+def discrete_n_dim_vector_sampler(q, rho, P):
+    sampler = DiscreteGaussianDistributionLatticeSampler(P, (q  * rho) / sqrt(ndim))
     sample = sampler()
     e_vec = [0] * ndim
 
@@ -108,17 +108,18 @@ def discrete_n_dim_vector_sampler(q, rho, pkey):
 #decoding in Z_n is equivalent to rounding to the nearest integer
 def decode(S, U, c):
     Uc = U * c
-    print("Uc:::::: ", Uc)
+    print("Uc:::::: ", Uc.transpose())
 
     y = Uc.apply_map(lambda x: round(x)) #if(x>=0):ceil(x) else:floor(x))
-    print("y at decode: ", y)
+    print("y at decode: ", y.transpose())
 
-    quad_norm = quadratic_norm(matrix_subtract(y, Uc), S)
+    quad_norm = quadratic_norm((y.transpose() - Uc.transpose()).transpose(), S)
     print("quad_norm of y-(U*c) :  ", quad_norm)
     if(quad_norm <= rho):
-        print("GOOD SAMPLE, SAMPLE: ", y)
+        print("GOOD DECODING, DECODED: ", y.transpose())
         return y
 
+    print("BAD QUADRATIC NORM FOR DECODING, RESTART")
     restart_program()
 
 # END AUX FUNCTIONS
@@ -189,7 +190,7 @@ def encaps(P):
 #DECAPS function from KEM
 # inputs: secret_key = U; encaps_ciphertext = (c, Z)
 # outputs: decaps_symmetric_k, a decapsulated symmetric key.
-def decaps(U, c):
+def decaps(S, U, c):
     print("\n\n\nBEGIN DECAPS::::\n")
     
     print("inputs: secret_key = U =\n", U, "\n; encaps_ciphertext = (c := (c)) : ", c, "\n")
@@ -200,14 +201,14 @@ def decaps(U, c):
     #Step 2: compute k
     #U^-1 * y is the integer part of vector "e" from encaps
     U_invert_times_y = U.inverse() * y
-    print("U_invert_times_y::::: ", U_invert_times_y)
+    print("U_invert_times_y::::: ", U_invert_times_y.transpose())
 
-    c_minus_Uy = matrix_subtract(MS_QQ_c(c), U_invert_times_y.transpose())
+    c_minus_Uy = MS_QQ_c(c) - U_invert_times_y.transpose()
     #convert c_minus_Uy to list for extractor
     c_minus_Uy_list = [0] * ndim
     for i in range(ndim):
         c_minus_Uy_list[i] = c_minus_Uy[0, i]
-    print("c_minus_Uy_list ::::: ", c_minus_Uy_list)
+    print("c_minus_Uy ::::: ", c_minus_Uy_list)
 
     #OLD: #decaps_symmetric_k = extractor(c_minus_Uy_list, Z)
     decaps_symmetric_k = extractor(c_minus_Uy_list)
@@ -225,7 +226,7 @@ def main():
     ### END ENCAPS
 
     ### BEGIN DECAPS
-    decaps_symmetric_k = decaps(U, c)
+    decaps_symmetric_k = decaps(S, U, c)
     ### END DECAPS
 
     print("decaps_symmetric_k: ", decaps_symmetric_k)
